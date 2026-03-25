@@ -1,0 +1,109 @@
+/* ============================================================
+   LAYOUT CSS — Main content area, page wrapper, header
+   ============================================================ */
+
+/* ── App shell: sidebar + main side by side ── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Main content area — offset by sidebar width ── */
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Page header ── */
+.page-header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  padding: var(--space-lg) var(--space-xl);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.page-header h2 {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-header p {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Page body — where all content lives ── */
+.page-body {
+  padding: var(--space-xl);
+  flex: 1;
+}
+
+/* ── Three column layout (params / chart / theory) ── */
+.three-col {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+/* ── Two column layout ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+/* ── Two column asymmetric (wider left) ── */
+.two-col-asymmetric {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+/* ── Full width row ── */
+.full-width {
+  width: 100%;
+}
+
+/* ── Section spacing ── */
+.section {
+  margin-bottom: var(--space-xl);
+}
+
+.section-title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* ── Responsive: collapse to single column on smaller screens ── */
+@media (max-width: 1200px) {
+  .three-col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .three-col,
+  .two-col,
+  .two-col-asymmetric {
+    grid-template-columns: 1fr;
+  }
+
+  .page-body {
+    padding: var(--space-md);
+  }
+}
