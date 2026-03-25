@@ -1,185 +1,264 @@
 // ============================================================
-// API — Yahoo Finance data fetching
-// All functions return clean, normalized data objects
-// We use the unofficial Yahoo Finance API via a CORS proxy
+// API — Alpha Vantage
+// Free tier: 25 calls/day, no CORS issues, no proxy needed
+// Docs: https://www.alphavantage.co/documentation/
 // ============================================================
 
-const PROXY = 'https://cors-anywhere.herokuapp.com/';
-const YF_BASE = 'https://query1.finance.yahoo.com/v8/finance';
-const YF_BASE_V10 = 'https://query1.finance.yahoo.com/v10/finance';
+const API_KEY = process.env.REACT_APP_AV_API_KEY;
+const BASE = 'https://www.alphavantage.co/query';
 
 // ── Generic fetch wrapper ──
-// Every API call goes through this — handles errors in one place
-const fetchYahoo = async (url) => {
-  const response = await fetch(PROXY + url, {
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Yahoo Finance request failed: ${response.status}`);
-  }
-  return response.json();
+const fetchAV = async (params) => {
+  const query = new URLSearchParams({ ...params, apikey: API_KEY });
+  const response = await fetch(`${BASE}?${query}`);
+  if (!response.ok) throw new Error(`AV request failed: ${response.status}`);
+  const data = await response.json();
+  if (data['Error Message']) throw new Error(data['Error Message']);
+  if (data['Note']) throw new Error('API call limit reached. Alpha Vantage free tier: 25 calls/day.');
+  if (data['Information']) throw new Error('Rate limit hit — wait 1 minute and try again. Free tier: 25 calls/day.');
+  return data;
 };
 
 // ============================================================
-// QUOTE — Current price, market cap, basic info
-// Used by: StockSearch, PortfolioBuilder
+// QUOTE — Current price and key stats
+// Used by: StockSearch
 // ============================================================
 export const fetchQuote = async (ticker) => {
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker.toUpperCase()}`;
-  const data = await fetchYahoo(url);
-  const q = data?.quoteResponse?.result?.[0];
-  if (!q) throw new Error(`No data found for ticker: ${ticker}`);
+  const [overview, globalQuote] = await Promise.all([
+    fetchAV({ function: 'OVERVIEW', symbol: ticker.toUpperCase() }),
+    fetchAV({ function: 'GLOBAL_QUOTE', symbol: ticker.toUpperCase() }),
+  ]);
+
+  const q = globalQuote['Global Quote'];
+  if (!q || !q['05. price']) throw new Error(`No data found for ticker: ${ticker}`);
 
   return {
-    ticker: q.symbol,
-    name: q.longName || q.shortName || ticker,
-    price: q.regularMarketPrice,
-    change: q.regularMarketChange,
-    changePercent: q.regularMarketChangePercent / 100,
-    open: q.regularMarketOpen,
-    high: q.regularMarketDayHigh,
-    low: q.regularMarketDayLow,
-    previousClose: q.regularMarketPreviousClose,
-    volume: q.regularMarketVolume,
-    marketCap: q.marketCap,
-    fiftyTwoWeekHigh: q.fiftyTwoWeekHigh,
-    fiftyTwoWeekLow: q.fiftyTwoWeekLow,
-    exchange: q.fullExchangeName,
-    currency: q.currency,
+    ticker:           q['01. symbol'],
+    name:             overview['Name'] ?? ticker,
+    price:            parseFloat(q['05. price']),
+    change:           parseFloat(q['09. change']),
+    changePercent:    parseFloat(q['10. change percent']) / 100,
+    open:             parseFloat(q['02. open']),
+    high:             parseFloat(q['03. high']),
+    low:              parseFloat(q['04. low']),
+    previousClose:    parseFloat(q['08. previous close']),
+    volume:           parseInt(q['06. volume']),
+    marketCap:        parseFloat(overview['MarketCapitalization']) || null,
+    fiftyTwoWeekHigh: parseFloat(q['03. high']) || parseFloat(overview['52WeekHigh']),
+    fiftyTwoWeekLow:  parseFloat(q['04. low'])  || parseFloat(overview['52WeekLow']),
+    exchange:         overview['Exchange'] ?? '',
+    currency:         'USD',
+    eps:              parseFloat(overview['EPS']) || null,
+    pe:               parseFloat(overview['PERatio']) || null,
+    sector:           overview['Sector'] ?? null,
+    industry:         overview['Industry'] ?? null,
+    description:      overview['Description'] ?? null,
   };
 };
 
 // ============================================================
-// HISTORICAL PRICES — OHLCV data for charts
-// interval: '1d', '1wk', '1mo'
-// range:    '1mo', '3mo', '6mo', '1y', '2y', '5y'
+// HISTORICAL PRICES — daily OHLCV data
 // Used by: StockSearch, TechnicalAnalysis, QuantAnalysis
 // ============================================================
-export const fetchHistorical = async (ticker, range = '1y', interval = '1d') => {
-  const url = `${YF_BASE}/chart/${ticker.toUpperCase()}?range=${range}&interval=${interval}&includeAdjustedClose=true`;
-  const data = await fetchYahoo(url);
+export const fetchHistorical = async (ticker, outputsize = 'compact') => {
+  // compact = last 100 days, full = 20 years
+  const data = await fetchAV({
+    function:   'TIME_SERIES_DAILY',
+    symbol:     ticker.toUpperCase(),
+    outputsize: outputsize,
+  });
+
+const series = data['Time Series (Daily)'];
+console.log('AV response:', JSON.stringify(data));
+console.log('Series exists:', !!series);
+if (!series) throw new Error(`No historical data for: ${ticker}`);
+  // Convert object to array, sort chronologically
+  return Object.entries(series)
+    .map(([date, v]) => ({
+      date,
+      open:     parseFloat(v['1. open']),
+      high:     parseFloat(v['2. high']),
+      low:      parseFloat(v['3. low']),
+      close:    parseFloat(v['4. close']),
+      volume:   parseInt(v['5. volume']),
+      adjClose: parseFloat(v['4. close']),
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+};
+
+// ============================================================
+// FUNDAMENTALS — Ratios, margins, financial health
+// Used by: Fundamentals page
+// ============================================================
+export const fetchFundamentals = async (ticker) => {
+  const overview = await fetchAV({
+    function: 'OVERVIEW',
+    symbol:   ticker.toUpperCase(),
+  });
+
+  const income = await fetchAV({
+    function: 'INCOME_STATEMENT',
+    symbol:   ticker.toUpperCase(),
+  });
+
+  const balance = await fetchAV({
+    function: 'BALANCE_SHEET',
+    symbol:   ticker.toUpperCase(),
+  });
+
+  const annualIncome  = income?.annualReports  ?? [];
+  const annualBalance = balance?.annualReports ?? [];
+
+  return {
+    // Valuation
+    peRatio:         parseFloat(overview['PERatio'])             || null,
+    forwardPE:       parseFloat(overview['ForwardPE'])           || null,
+    pbRatio:         parseFloat(overview['PriceToBookRatio'])    || null,
+    evEbitda:        parseFloat(overview['EVToEBITDA'])          || null,
+    evRevenue:       parseFloat(overview['EVToRevenue'])         || null,
+    priceToSales:    parseFloat(overview['PriceToSalesRatioTTM'])|| null,
+
+    // Profitability
+    returnOnEquity:  parseFloat(overview['ReturnOnEquityTTM'])   || null,
+    returnOnAssets:  parseFloat(overview['ReturnOnAssetsTTM'])   || null,
+    grossMargin:     parseFloat(overview['GrossProfitTTM'])      || null,
+    operatingMargin: parseFloat(overview['OperatingMarginTTM'])  || null,
+    profitMargin:    parseFloat(overview['ProfitMargin'])        || null,
+
+    // Financial health
+    currentRatio:    parseFloat(overview['CurrentRatio'])        || null,
+    quickRatio:      parseFloat(overview['QuickRatio'])          || null,
+    debtToEquity:    parseFloat(overview['DebtToEquityRatio'])   || null,
+
+    // Income statement history (last 5 years, chronological)
+    incomeHistory: [...annualIncome].reverse().map(s => ({
+      date:            s.fiscalDateEnding,
+      revenue:         parseFloat(s.totalRevenue)      || null,
+      grossProfit:     parseFloat(s.grossProfit)       || null,
+      operatingIncome: parseFloat(s.operatingIncome)   || null,
+      netIncome:       parseFloat(s.netIncome)         || null,
+      eps:             parseFloat(s.reportedEPS)       || null,
+    })),
+
+    // Balance sheet history
+    balanceHistory: [...annualBalance].reverse().map(s => ({
+      date:              s.fiscalDateEnding,
+      totalAssets:       parseFloat(s.totalAssets)              || null,
+      totalLiabilities:  parseFloat(s.totalLiabilities)         || null,
+      shareholderEquity: parseFloat(s.totalShareholderEquity)   || null,
+    })),
+  };
+};
+
+// ============================================================
+// SENTIMENT — Analyst ratings, price targets
+// Used by: Sentiment page
+// ============================================================
+export const fetchSentiment = async (ticker) => {
+  const overview = await fetchAV({
+    function: 'OVERVIEW',
+    symbol:   ticker.toUpperCase(),
+  });
+
+  return {
+    targetHighPrice:   parseFloat(overview['AnalystTargetPrice']) || null,
+    targetLowPrice:    null,
+    targetMeanPrice:   parseFloat(overview['AnalystTargetPrice']) || null,
+    targetMedianPrice: null,
+    recommendationKey: overview['AnalystRatingBuy'] ? 'buy' : null,
+    trend: [],
+  };
+};
+
+// ============================================================
+// HISTORICAL PRICES — Yahoo Finance (no proxy needed for chart endpoint)
+// Replaces Alpha Vantage historical — no premium restrictions
+// range: '1mo', '3mo', '6mo', '1y', '2y', '5y'
+// ============================================================
+export const fetchHistoricalYahoo = async (ticker, range = '1y') => {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker.toUpperCase()}?range=${range}&interval=1d`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Yahoo request failed: ${response.status}`);
+  const data = await response.json();
+
   const result = data?.chart?.result?.[0];
   if (!result) throw new Error(`No historical data for: ${ticker}`);
 
   const timestamps = result.timestamp;
   const quote = result.indicators.quote[0];
-  const adjClose = result.indicators.adjclose?.[0]?.adjclose;
 
-  // Zip all arrays into array of OHLCV objects
   return timestamps.map((ts, i) => ({
-    date: new Date(ts * 1000).toISOString().split('T')[0],
-    open:   quote.open[i],
-    high:   quote.high[i],
-    low:    quote.low[i],
-    close:  quote.close[i],
-    volume: quote.volume[i],
-    adjClose: adjClose?.[i] ?? quote.close[i],
-  })).filter(d => d.close !== null); // remove null entries
+    date:     new Date(ts * 1000).toISOString().split('T')[0],
+    open:     quote.open[i],
+    high:     quote.high[i],
+    low:      quote.low[i],
+    close:    quote.close[i],
+    volume:   quote.volume[i],
+    adjClose: quote.close[i],
+  })).filter(d => d.close !== null);
 };
-
 // ============================================================
-// FUNDAMENTALS — Financial ratios and summary detail
-// Used by: Fundamentals page
+// HISTORICAL PRICES — Twelvedata
+// Free tier: 800 calls/day, no CORS issues
+// outputsize: number of data points (max 5000 on free tier)
 // ============================================================
-export const fetchFundamentals = async (ticker) => {
-  const url = `${YF_BASE_V10}/quoteSummary/${ticker.toUpperCase()}?modules=summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory`;
-  const data = await fetchYahoo(url);
-  const result = data?.quoteSummary?.result?.[0];
-  if (!result) throw new Error(`No fundamentals data for: ${ticker}`);
+export const fetchHistoricalTD = async (ticker, outputsize = 365) => {
+  const key = process.env.REACT_APP_TD_API_KEY;
+  const url = `https://api.twelvedata.com/time_series?symbol=${ticker.toUpperCase()}&interval=1day&outputsize=${outputsize}&apikey=${key}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Twelvedata request failed: ${response.status}`);
+  const data = await response.json();
+  if (data.status === 'error') throw new Error(data.message);
 
-  const sd  = result.summaryDetail;
-  const ks  = result.defaultKeyStatistics;
-  const fd  = result.financialData;
-  const ish = result.incomeStatementHistory?.incomeStatementHistory ?? [];
-  const bsh = result.balanceSheetHistory?.balanceSheetHistory ?? [];
+  // Twelvedata returns newest first — reverse for chronological order
+  return [...data.values].reverse().map(d => ({
+    date:     d.datetime,
+    open:     parseFloat(d.open),
+    high:     parseFloat(d.high),
+    low:      parseFloat(d.low),
+    close:    parseFloat(d.close),
+    volume:   parseInt(d.volume),
+    adjClose: parseFloat(d.close),
+  }));
+};
+// ============================================================
+// QUOTE — Twelvedata
+// Replaces Alpha Vantage quote to avoid 25 call/day limit
+// ============================================================
+export const fetchQuoteTD = async (ticker) => {
+  const key = process.env.REACT_APP_TD_API_KEY;
+  const [quoteRes, profileRes, statsRes] = await Promise.all([
+    fetch(`https://api.twelvedata.com/quote?symbol=${ticker.toUpperCase()}&apikey=${key}`),
+    fetch(`https://api.twelvedata.com/profile?symbol=${ticker.toUpperCase()}&apikey=${key}`),
+    fetch(`https://api.twelvedata.com/statistics?symbol=${ticker.toUpperCase()}&apikey=${key}`),
+  ]);
+
+  const quote   = await quoteRes.json();
+  const profile = await profileRes.json();
+  const stats   = await statsRes.json();
+
+  if (quote.status === 'error') throw new Error(quote.message);
 
   return {
-    // Valuation
-    peRatio:        sd?.trailingPE?.raw ?? null,
-    forwardPE:      sd?.forwardPE?.raw ?? null,
-    pbRatio:        ks?.priceToBook?.raw ?? null,
-    evEbitda:       ks?.enterpriseToEbitda?.raw ?? null,
-    evRevenue:      ks?.enterpriseToRevenue?.raw ?? null,
-    priceToSales:   sd?.priceToSalesTrailing12Months?.raw ?? null,
-
-    // Profitability
-    returnOnEquity:  fd?.returnOnEquity?.raw ?? null,
-    returnOnAssets:  fd?.returnOnAssets?.raw ?? null,
-    grossMargin:     fd?.grossMargins?.raw ?? null,
-    operatingMargin: fd?.operatingMargins?.raw ?? null,
-    profitMargin:    fd?.profitMargins?.raw ?? null,
-
-    // Growth
-    revenueGrowth:  fd?.revenueGrowth?.raw ?? null,
-    earningsGrowth: fd?.earningsGrowth?.raw ?? null,
-
-    // Financial health
-    totalCash:       fd?.totalCash?.raw ?? null,
-    totalDebt:       fd?.totalDebt?.raw ?? null,
-    debtToEquity:    fd?.debtToEquity?.raw ?? null,
-    currentRatio:    fd?.currentRatio?.raw ?? null,
-    quickRatio:      fd?.quickRatio?.raw ?? null,
-    freeCashFlow:    fd?.freeCashflow?.raw ?? null,
-
-    // Income statement history (last 4 years)
-    incomeHistory: ish.map(s => ({
-      date:            s.endDate?.fmt ?? '',
-      revenue:         s.totalRevenue?.raw ?? null,
-      grossProfit:     s.grossProfit?.raw ?? null,
-      operatingIncome: s.operatingIncome?.raw ?? null,
-      netIncome:       s.netIncome?.raw ?? null,
-      eps:             s.basicEPS?.raw ?? null,
-    })),
-
-    // Balance sheet history
-    balanceHistory: bsh.map(s => ({
-      date:              s.endDate?.fmt ?? '',
-      totalAssets:       s.totalAssets?.raw ?? null,
-      totalLiabilities:  s.totalLiab?.raw ?? null,
-      shareholderEquity: s.totalStockholderEquity?.raw ?? null,
-    })),
-  };
-};
-
-// ============================================================
-// SENTIMENT — Analyst ratings, price targets, recommendations
-// Used by: Sentiment page
-// ============================================================
-export const fetchSentiment = async (ticker) => {
-  const url = `${YF_BASE_V10}/quoteSummary/${ticker.toUpperCase()}?modules=recommendationTrend,financialData,defaultKeyStatistics,institutionOwnership`;
-  const data = await fetchYahoo(url);
-  const result = data?.quoteSummary?.result?.[0];
-  if (!result) throw new Error(`No sentiment data for: ${ticker}`);
-
-  const rt = result.recommendationTrend?.trend ?? [];
-  const fd = result.financialData;
-  const ks = result.defaultKeyStatistics;
-
-  return {
-    // Analyst consensus
-    recommendationKey:  fd?.recommendationKey ?? null,
-    recommendationMean: fd?.recommendationMean?.raw ?? null,
-    numberOfAnalysts:   fd?.numberOfAnalystOpinions?.raw ?? null,
-    targetHighPrice:    fd?.targetHighPrice?.raw ?? null,
-    targetLowPrice:     fd?.targetLowPrice?.raw ?? null,
-    targetMeanPrice:    fd?.targetMeanPrice?.raw ?? null,
-    targetMedianPrice:  fd?.targetMedianPrice?.raw ?? null,
-
-    // Short interest
-    shortRatio:         ks?.shortRatio?.raw ?? null,
-    shortPercentFloat:  ks?.shortPercentOfFloat?.raw ?? null,
-    sharesShort:        ks?.sharesShort?.raw ?? null,
-
-    // Recommendation trend (last 4 months)
-    trend: rt.map(t => ({
-      period:     t.period,
-      strongBuy:  t.strongBuy,
-      buy:        t.buy,
-      hold:       t.hold,
-      sell:       t.sell,
-      strongSell: t.strongSell,
-    })),
+    ticker:           quote.symbol,
+    name:             quote.name,
+    price:            parseFloat(quote.close),
+    change:           parseFloat(quote.change),
+    changePercent:    parseFloat(quote.percent_change) / 100,
+    open:             parseFloat(quote.open),
+    high:             parseFloat(quote.high),
+    low:              parseFloat(quote.low),
+    previousClose:    parseFloat(quote.previous_close),
+    volume:           parseInt(quote.volume),
+    marketCap:        parseFloat(stats?.statistics?.valuations_metrics?.market_capitalization) || null,
+    fiftyTwoWeekHigh: parseFloat(quote.fifty_two_week?.high) || null,
+    fiftyTwoWeekLow:  parseFloat(quote.fifty_two_week?.low)  || null,
+    exchange:         quote.exchange,
+    currency:         quote.currency,
+    eps:              null,
+    pe:               null,
+    sector:           profile?.sector    ?? null,
+    industry:         profile?.industry  ?? null,
+    description:      profile?.description ?? null,
   };
 };
