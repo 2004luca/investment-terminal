@@ -175,11 +175,11 @@ const StockSearch = () => {
               </div>
 
               <div className="metric-card">
-                <span className="metric-card-label">Market Cap</span>
+                <span className="metric-card-label">Avg Volume</span>
                 <span className="metric-card-value">
-                  {formatMarketCap(quote.marketCap)}
+                  {formatMarketCap(quote.avgVolume, 1)}
                 </span>
-                <span className="metric-card-sub">Total market value</span>
+                <span className="metric-card-sub">30-day average</span>
               </div>
 
               <div className="metric-card">
@@ -345,25 +345,29 @@ const StockSearch = () => {
             </div>
 
             <div className="formula-box">
-              <div className="formula-box-title">Why We Use Regular Close Here</div>
-              <div className="formula-box-math">Adjusted close = premium endpoint on most free APIs</div>
-              <div className="formula-box-description">
-                Alpha Vantage's free tier does not provide adjusted close data — it is
-                a premium feature. For short-term price charts (under 1 year) the
-                difference is minimal for most stocks. For dividend-heavy stocks over
-                multi-year periods, the regular close will show small downward gaps on
-                ex-dividend dates. In production systems, adjusted close is always preferred.
-              </div>
+                <div className="formula-box-title">Why We Use Regular Close Here</div>
+                <div className="formula-box-math">Adjusted close = premium endpoint on Twelvedata free tier</div>
+                <div className="formula-box-description">
+                   We use Twelvedata's free tier for historical prices, which provides
+                   regular close data only. Adjusted close — which corrects for dividends
+                   and splits — is a premium feature. For short-term charts the difference
+                   is minimal. For dividend-heavy stocks over multi-year periods, you may
+                   notice small downward gaps on ex-dividend dates. In production systems,
+                   adjusted close is always preferred for total return analysis.
+                </div>
             </div>
 
             <div className="formula-box">
-              <div className="formula-box-title">Market Capitalization</div>
-              <div className="formula-box-math">Market Cap = Share Price × Shares Outstanding</div>
-              <div className="formula-box-description">
-                The total market value of a company. A company with 1 billion shares
-                trading at $150 has a market cap of $150 billion. Used to classify
-                companies: Large Cap (&gt;$10B), Mid Cap ($2B–$10B), Small Cap (&lt;$2B).
-              </div>
+                <div className="formula-box-title">Average Volume</div>
+                <div className="formula-box-math">Avg Volume = Mean daily shares traded over 30 days</div>
+                <div className="formula-box-description">
+                   Average volume measures liquidity — how easily you can enter or exit a
+                   position without moving the price. A stock with 50M average daily volume
+                   (like AAPL) can absorb large orders with minimal price impact. A stock
+                   with 100K average daily volume may gap significantly on any meaningful
+                   order. Always compare today's volume to average volume: a spike signals
+                   unusual activity — earnings, news, or institutional buying/selling.
+                </div>
             </div>
 
             <div className="formula-box">

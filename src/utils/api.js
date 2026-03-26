@@ -227,15 +227,16 @@ export const fetchHistoricalTD = async (ticker, outputsize = 365) => {
 // ============================================================
 export const fetchQuoteTD = async (ticker) => {
   const key = process.env.REACT_APP_TD_API_KEY;
-  const [quoteRes, profileRes, statsRes] = await Promise.all([
-    fetch(`https://api.twelvedata.com/quote?symbol=${ticker.toUpperCase()}&apikey=${key}`),
-    fetch(`https://api.twelvedata.com/profile?symbol=${ticker.toUpperCase()}&apikey=${key}`),
-    fetch(`https://api.twelvedata.com/statistics?symbol=${ticker.toUpperCase()}&apikey=${key}`),
-  ]);
+  const t = ticker.toUpperCase();
 
-  const quote   = await quoteRes.json();
-  const profile = await profileRes.json();
-  const stats   = await statsRes.json();
+  const quoteRes   = await fetch(`https://api.twelvedata.com/quote?symbol=${t}&apikey=${key}`);
+  const quote      = await quoteRes.json();
+
+
+  await new Promise(res => setTimeout(res, 500));
+  const profileRes = await fetch(`https://api.twelvedata.com/profile?symbol=${t}&apikey=${key}`);
+  const profile    = await profileRes.json();
+
 
   if (quote.status === 'error') throw new Error(quote.message);
 
@@ -249,10 +250,10 @@ export const fetchQuoteTD = async (ticker) => {
     high:             parseFloat(quote.high),
     low:              parseFloat(quote.low),
     previousClose:    parseFloat(quote.previous_close),
-    volume:           parseInt(quote.volume),
-    marketCap:        parseFloat(stats?.statistics?.valuations_metrics?.market_capitalization) || null,
+    volume:    parseInt(quote.volume),
+    avgVolume: parseInt(quote.average_volume) || null,
     fiftyTwoWeekHigh: parseFloat(quote.fifty_two_week?.high) || null,
-    fiftyTwoWeekLow:  parseFloat(quote.fifty_two_week?.low)  || null,
+    fiftyTwoWeekLow:  parseFloat(quote.fifty_two_week?.low)  || null,    
     exchange:         quote.exchange,
     currency:         quote.currency,
     eps:              null,
