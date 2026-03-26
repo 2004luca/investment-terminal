@@ -209,10 +209,10 @@ const ReturnsDistribution = () => {
       marker: { color: '#2563eb', size: 4, opacity: 0.7 },
       hovertemplate: 'Theoretical: %{x:.4f}<br>Actual: %{y:.4f}<extra></extra>',
     },
-    // Perfect normal reference line
+    // Perfect normal reference line — uses theoretical quantile range
     {
-      x: [minR, maxR],
-      y: [minR, maxR],
+      x: qqData ? [Math.min(...qqData.theoretical), Math.max(...qqData.theoretical)] : [minR, maxR],
+      y: qqData ? [Math.min(...qqData.theoretical), Math.max(...qqData.theoretical)] : [minR, maxR],
       type: 'scatter',
       mode: 'lines',
       name: 'Perfect Normal',
