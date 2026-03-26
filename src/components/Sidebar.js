@@ -1,22 +1,18 @@
 // ============================================================
 // SIDEBAR.JS — Fixed left navigation panel
-// Uses NavLink from react-router-dom to highlight active route
 // ============================================================
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-// ── Navigation structure ──
-// Each section has a label and an array of page links
 const NAV = [
   {
-    section: 'Research',
+    section: 'Quant Research',
     items: [
-      { label: 'Stock Search',       path: '/stock-search' },
-      { label: 'Fundamentals',       path: '/fundamentals' },
-      { label: 'Technical Analysis', path: '/technical-analysis' },
-      { label: 'Quant Analysis',     path: '/quant-analysis' },
-      { label: 'Sentiment',          path: '/sentiment' },
+      { label: 'Returns & Distribution', path: '/returns-distribution' },
+      { label: 'Volatility & Risk',      path: '/volatility-risk' },
+      { label: 'Regression & Beta',      path: '/regression-beta' },
+      { label: 'Autocorrelation',        path: '/autocorrelation' },
     ],
   },
   {
@@ -36,23 +32,17 @@ const Sidebar = () => {
   return (
     <aside className="sidebar">
 
-      {/* ── Logo / Title ── */}
       <div className="sidebar-logo">
-        <h1>Investment Terminal</h1>
+        <h1>Quant Terminal</h1>
         <span>Research & Portfolio</span>
       </div>
 
-      {/* ── Navigation ── */}
       <nav className="sidebar-nav">
         {NAV.map((group) => (
           <div key={group.section}>
-
-            {/* Section label — RESEARCH / PORTFOLIO */}
             <div className="sidebar-section-label">
               {group.section}
             </div>
-
-            {/* Page links */}
             {group.items.map((item) => (
               <NavLink
                 key={item.path}
@@ -65,14 +55,12 @@ const Sidebar = () => {
                 {item.label}
               </NavLink>
             ))}
-
           </div>
         ))}
       </nav>
 
-      {/* ── Footer ── */}
       <div className="sidebar-footer">
-        Data via Yahoo Finance
+        Data via Twelvedata
       </div>
 
     </aside>
