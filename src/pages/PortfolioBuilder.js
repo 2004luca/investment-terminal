@@ -5,6 +5,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { usePortfolio } from '../utils/PortfolioContext';
 import Plot from 'react-plotly.js';
 import { fetchHistorical } from '../utils/api';
 import {
@@ -26,7 +27,6 @@ const COLORS = [
   '#2563eb', '#16a34a', '#dc2626', '#7c3aed',
   '#ea580c', '#0891b2', '#be185d', '#854d0e',
 ];
-
 // ── Compute correlation matrix ──
 const correlationMatrix = (returnsMap, tickers) => {
   const matrix = [];
@@ -53,7 +53,13 @@ const correlationMatrix = (returnsMap, tickers) => {
 };
 
 const PortfolioBuilder = () => {
-  const [holdings, setHoldings]     = useState([]);
+  const {
+    setPortfolioData: setGlobalPortfolio,
+    holdings: globalHoldings,
+    setHoldings: setGlobalHoldings,
+  } = usePortfolio();
+
+  const [holdings, setHoldings]     = useState(globalHoldings ?? []);
   const [newTicker, setNewTicker]   = useState('');
   const [newWeight, setNewWeight]   = useState('');
   const [loading, setLoading]       = useState(false);
@@ -177,7 +183,7 @@ const PortfolioBuilder = () => {
       // Correlation matrix
       const corrMatrix = correlationMatrix(returnsMap, tickers);
 
-      setData({
+      const built = {
         portReturns,
         spyReturns,
         cumPort,
@@ -193,7 +199,10 @@ const PortfolioBuilder = () => {
         sharpe:    sharpeRatio(portReturns),
         maxDD:     maxDrawdown(cumPort).value,
         spyReturn: annualizedReturn(spyReturns),
-      });
+      };
+      setData(built);
+      setGlobalPortfolio(built);
+      setGlobalHoldings(holdings);
     } catch (err) {
       setError(err.message);
     } finally {
