@@ -10,11 +10,9 @@ import { fetchHistorical } from '../utils/api';
 import {
   simpleReturns,
   autocorrelation,
-  mean,
 } from '../utils/finance';
 import {
   formatDecimal,
-  colorClass,
 } from '../utils/formatters';
 
 const RANGES = [
@@ -28,7 +26,6 @@ const MAX_LAG = 30;
 
 // ── PACF via Yule-Walker equations ──
 const pacf = (returns, maxLag) => {
-  const n = returns.length;
   const acfVals = autocorrelation(returns, maxLag).map(d => d.acf);
   const result = [1]; // PACF(0) = 1
 
@@ -43,8 +40,6 @@ const pacf = (returns, maxLag) => {
       }
       matrix.push(row);
     }
-    const rhs = acfVals.slice(0, k);
-
     // Solve using Levinson-Durbin approximation
     // For simplicity we use the last coefficient of the solution
     try {
@@ -160,7 +155,6 @@ const Autocorrelation = () => {
     : [];
 
   // Ljung-Box tests
-  const lb5  = returns.length ? ljungBox(returns, 5)  : null;
   const lb10 = returns.length ? ljungBox(returns, 10) : null;
   const lb20 = returns.length ? ljungBox(returns, 20) : null;
 
@@ -183,8 +177,6 @@ const Autocorrelation = () => {
   };
 
   // ── ACF Chart ──
-  const lags = acfData.map(d => d.lag);
-
   const acfChartData = acfData.length ? [
     // Significance bands
     {

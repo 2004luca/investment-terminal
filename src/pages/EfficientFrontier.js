@@ -8,13 +8,11 @@ import React, { useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { usePortfolio } from '../utils/PortfolioContext';
 import {
-  mean,
   annualizedReturn,
   annualizedVol,
   sharpeRatio,
   covarianceMatrix,
   portfolioVariance,
-  simpleReturns,
 } from '../utils/finance';
 import {
   formatPercent,
@@ -131,13 +129,6 @@ const EfficientFrontier = () => {
   const { tickers, weights, holdingStats } = portfolioData;
 
   // ── Build returns matrix and covariance ──
-  const returnsMatrix = useMemo(() => {
-    if (!portfolioData.holdingStats) return [];
-    return tickers.map(t => {
-      const h = holdingStats.find(x => x.ticker === t);
-      return h ? Array(252).fill(h.annReturn / 252) : [];
-    });
-  }, [portfolioData]);
 
   // Use actual daily returns from portfolio data
   const dailyReturnsMatrix = useMemo(() => {
@@ -150,7 +141,7 @@ const EfficientFrontier = () => {
         h.annReturn / 252 + (Math.random() - 0.5) * h.annVol / Math.sqrt(252)
       );
     });
-  }, [portfolioData]);
+  }, [portfolioData, holdingStats, tickers]);
 
   const annualReturns = holdingStats.map(h => h.annReturn);
   const covMatrix     = useMemo(() =>
@@ -198,8 +189,6 @@ const EfficientFrontier = () => {
   );
   const blMaxSharpe = blSimResults.reduce((best, p) =>
     p.sharpe > best.sharpe ? p : best, blSimResults[0]);
-  const blMinVar = blSimResults.reduce((best, p) =>
-    p.vol < best.vol ? p : best, blSimResults[0]);
   // ── Early return after all hooks ──
   if (!portfolioData) {
     return (
@@ -221,9 +210,7 @@ const EfficientFrontier = () => {
   }
 
   // ── Sharpe color scale for scatter ──
-  const sharpes = simResults.map(p => p.sharpe);
-  const minS = Math.min(...sharpes);
-  const maxS = Math.max(...sharpes);
+
 
   // ── Frontier Chart Data ──
   const frontierData = [

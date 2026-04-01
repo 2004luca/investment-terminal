@@ -9,10 +9,8 @@ import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { usePortfolio } from '../utils/PortfolioContext';
 import {
-  mean,
   annualizedReturn,
   annualizedVol,
-  simpleReturns,
 } from '../utils/finance';
 import {
   formatPercent,
@@ -170,7 +168,7 @@ const PortfolioAttribution = () => {
     );
   }
 
-  const { tickers, weights, holdingStats } = portfolioData;
+  const { tickers, holdingStats } = portfolioData;
   const {
     portfolioReturn, benchmarkReturn, activeReturn,
     totalAllocation, totalSelection, totalInteraction,

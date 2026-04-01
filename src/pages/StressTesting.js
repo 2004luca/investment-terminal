@@ -8,15 +8,11 @@ import React, { useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { usePortfolio } from '../utils/PortfolioContext';
 import {
-  simpleReturns,
-  mean,
-  annualizedReturn,
   annualizedVol,
 } from '../utils/finance';
 import {
   formatPercent,
   formatDecimal,
-  colorClass,
 } from '../utils/formatters';
 
 const COLORS = [
@@ -145,11 +141,10 @@ const getSector = (ticker) => {
 // ── Compute worst rolling period ──
 const worstRolling = (returns, window) => {
   let worst = 0;
-  let worstStart = 0;
   for (let i = window; i <= returns.length; i++) {
     const slice = returns.slice(i - window, i);
     const cum = slice.reduce((acc, r) => acc * (1 + r), 1) - 1;
-    if (cum < worst) { worst = cum; worstStart = i - window; }
+    if (cum < worst) { worst = cum; }
   }
   return worst;
 };

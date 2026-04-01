@@ -1,70 +1,120 @@
-# Getting Started with Create React App
+# Quant Terminal
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A professional quantitative finance research and portfolio analysis tool built with React. Analyzes stocks and portfolios using real market data, implementing financial models from scratch with full educational explanations.
 
-## Available Scripts
+**Live Demo:** [investment-terminal-tau.vercel.app](https://investment-terminal-tau.vercel.app)
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## What It Does
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Two sections — Quant Research for individual stock analysis, Portfolio for multi-asset portfolio construction and risk management.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Quant Research
+| Page | What It Shows |
+|---|---|
+| Returns & Distribution | Daily returns histogram, normal overlay, QQ plot, skewness, kurtosis, VaR |
+| Volatility & Risk | Rolling volatility, rolling Sharpe, drawdown underwater chart, Calmar ratio |
+| Regression & Beta | OLS regression vs SPY, alpha, R², rolling beta, residuals, CAPM, SML |
+| Autocorrelation | ACF, PACF, Ljung-Box test, squared returns, volatility clustering |
 
-### `npm test`
+### Portfolio
+| Page | What It Shows |
+|---|---|
+| Portfolio Builder | Add stocks with weights, performance vs SPY, correlation heatmap |
+| Risk & Return | Sharpe, Sortino, Calmar, VaR, CVaR, drawdown, return distribution |
+| Efficient Frontier | Monte Carlo simulation, Markowitz optimization, CML, Black-Litterman |
+| Factor Models | CAPM, Jensen's Alpha, Treynor Ratio, SML, rolling beta/alpha, return decomposition |
+| Stress Testing | 5 historical crisis scenarios, sector-level shock estimation, sensitivity table |
+| Portfolio Attribution | Brinson-Hood-Beebower model — allocation, selection, interaction effects |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Models Implemented From Scratch
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **OLS Regression** — beta, alpha, R², residuals
+- **CAPM** — expected return, Jensen's alpha, Security Market Line
+- **Markowitz Portfolio Optimization** — via Monte Carlo simulation (2,000 portfolios)
+- **Black-Litterman Model** — Bayesian blending of equilibrium returns and investor views
+- **Brinson-Hood-Beebower Attribution** — allocation, selection, interaction effects
+- **Ljung-Box Test** — formal autocorrelation significance test
+- **PACF** — via Levinson-Durbin recursion
+- **Risk Metrics** — VaR, CVaR, Max Drawdown, Calmar, Sortino, Treynor
+- **Rolling Analysis** — rolling beta, alpha, Sharpe, volatility
+- **Covariance Matrix** — portfolio variance, diversification ratio
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Tech Stack
 
-### `npm run eject`
+| Tool | Purpose |
+|---|---|
+| React + JavaScript | Frontend framework |
+| Plotly.js | Charts — scatter, histogram, waterfall, heatmap, ACF bars |
+| react-router-dom | Client-side routing |
+| Twelvedata API | Real market data — prices, quotes |
+| Custom CSS | Design system with CSS variables, no component library |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Getting Started
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Prerequisites
+- Node.js 16+
+- Free Twelvedata API key from [twelvedata.com](https://twelvedata.com)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Installation
+```bash
+git clone https://github.com/2004luca/investment-terminal.git
+cd investment-terminal
+npm install
+```
 
-## Learn More
+### Environment Variables
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Create a `.env` file in the root directory:
+```
+REACT_APP_TD_API_KEY=your_twelvedata_api_key_here
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Run
+```bash
+npm start
+```
 
-### Code Splitting
+Opens at `http://localhost:3000`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
+## Project Structure
+```
+src/
+├── components/        # Sidebar, Layout, shared UI
+├── pages/             # One file per page (10 total)
+├── styles/            # CSS design system — variables, cards, charts
+└── utils/
+    ├── api.js         # Twelvedata API calls
+    ├── finance.js     # All quant math — pure functions
+    ├── formatters.js  # Number formatting utilities
+    └── PortfolioContext.js  # Global portfolio state
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+## Data
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+All price data is fetched live from the [Twelvedata](https://twelvedata.com) free tier (800 calls/day). Fundamental data and historical scenarios outside the 2-year window use documented sector-level estimates based on published research.
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Previous Projects
 
-### Deployment
+This is the third terminal in a series:
+- **Options Terminal** — Black-Scholes pricing, Greeks, strategy P&L, PDE solver, volatility surface
+- **Macro Terminal** — macroeconomic data visualization and analysis
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `npm run build` fails to minify
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT

@@ -10,10 +10,7 @@ import { fetchHistorical } from '../utils/api';
 import {
   simpleReturns,
   linearRegression,
-  mean,
   annualizedReturn,
-  annualizedVol,
-  rollingVol,
 } from '../utils/finance';
 import {
   formatPercent,

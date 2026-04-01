@@ -21,7 +21,6 @@ import {
 import {
   formatPercent,
   formatDecimal,
-  formatPercentDirect,
   colorClass,
 } from '../utils/formatters';
 
@@ -71,7 +70,6 @@ const generateQQData = (returns) => {
 const ReturnsDistribution = () => {
   const [ticker, setTicker]     = useState('');
   const [returns, setReturns]   = useState([]);
-  const [dates, setDates]       = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
   const [activeRange, setRange] = useState('2Y');
@@ -88,9 +86,7 @@ const ReturnsDistribution = () => {
       const history = await fetchHistorical(ticker.trim(), range.outputsize);
       const prices = history.map(d => d.close);
       const rets   = simpleReturns(prices);
-      const ds     = history.slice(1).map(d => d.date);
       setReturns(rets);
-      setDates(ds);
       setName(ticker.trim().toUpperCase());
     } catch (err) {
       setError(err.message);

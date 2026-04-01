@@ -15,7 +15,6 @@ import {
   annualizedVol,
   sharpeRatio,
   maxDrawdown,
-  cumulativeReturn,
 } from '../utils/finance';
 import {
   formatPercent,

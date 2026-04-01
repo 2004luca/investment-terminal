@@ -9,12 +9,10 @@ import React, { useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { usePortfolio } from '../utils/PortfolioContext';
 import {
-  mean,
   annualizedReturn,
   annualizedVol,
   sharpeRatio,
   linearRegression,
-  simpleReturns,
 } from '../utils/finance';
 import {
   formatPercent,
@@ -116,14 +114,14 @@ const FactorModels = () => {
     );
   }
 
-  const { portReturns, spyReturns, chartDates, holdingStats, tickers, weights } = portfolioData;
+  const { portReturns, spyReturns, chartDates, holdingStats, weights } = portfolioData;
+
 
   const beta       = regression.slope;
   const r2         = regression.r2;
   const intercept  = regression.intercept;
   const annAlpha   = intercept * 252;
   const annRet     = annualizedReturn(portReturns);
-  const annVol     = annualizedVol(portReturns);
   const capmExp    = RISK_FREE + beta * (MARKET_RET - RISK_FREE);
   const treynor    = beta !== 0 ? (annRet - RISK_FREE) / beta : 0;
   const sharpe     = sharpeRatio(portReturns, RISK_FREE);

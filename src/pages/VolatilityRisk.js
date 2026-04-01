@@ -16,8 +16,6 @@ import {
   drawdownSeries,
   maxDrawdown,
   historicalVaR,
-  mean,
-  stdDev,
 } from '../utils/finance';
 import {
   formatPercent,
