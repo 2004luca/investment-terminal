@@ -151,6 +151,24 @@ const worstRolling = (returns, window) => {
 
 const StressTesting = () => {
   const { portfolioData } = usePortfolio();
+  if (!portfolioData) {
+    return (
+      <>
+        <div className="page-header">
+          <h2>Risk & Return</h2>
+          <p>Sharpe, Sortino, Calmar, Max Drawdown, VaR, CVaR — with formulas and explanations</p>
+        </div>
+        <div className="page-body">
+          <div className="chart-empty">
+            <span style={{ fontSize: '14px' }}>No portfolio found</span>
+            <span style={{ fontSize: '12px' }}>
+              Go to Portfolio Builder and build a portfolio first
+            </span>
+          </div>
+        </div>
+      </>
+    );
+  }
   const [activeScenario, setActiveScenario] = useState(null);
 
   const { tickers, weights, holdingStats, portReturns, chartDates } = portfolioData;
