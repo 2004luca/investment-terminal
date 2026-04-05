@@ -5,7 +5,6 @@
 // ============================================================
 
 import React, { useState } from 'react';
-import { useQuant } from '../utils/QuantContext';
 import Plot from 'react-plotly.js';
 import { fetchHistorical } from '../utils/api';
 import {
@@ -69,19 +68,12 @@ const generateQQData = (returns) => {
 };
 
 const ReturnsDistribution = () => {
-  const {
-    quantTicker, setQuantTicker,
-    quantReturns, setQuantReturns,
-    setQuantHistory,
-    setQuantDates,
-  } = useQuant();
-
-  const [ticker, setTicker]     = useState(quantTicker);
-  const [returns, setReturns]   = useState(quantReturns);
+  const [ticker, setTicker]     = useState('');
+  const [returns, setReturns]   = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
   const [activeRange, setRange] = useState('2Y');
-  const [stockName, setName]    = useState(quantTicker);
+  const [stockName, setName]    = useState('');
 
   const handleSearch = async () => {
     if (!ticker.trim()) return;
@@ -96,11 +88,6 @@ const ReturnsDistribution = () => {
       const rets   = simpleReturns(prices);
       setReturns(rets);
       setName(ticker.trim().toUpperCase());
-      // Save to context
-      setQuantTicker(ticker.trim().toUpperCase());
-      setQuantHistory(history);
-      setQuantReturns(rets);
-      setQuantDates([]);
     } catch (err) {
       setError(err.message);
     } finally {

@@ -4,7 +4,7 @@
 // rolling beta, residuals analysis
 // ============================================================
 
-import React, { useState, useEffect } from 'react';import { useQuant } from '../utils/QuantContext';
+import React, { useState } from 'react';
 import Plot from 'react-plotly.js';
 import { fetchHistorical } from '../utils/api';
 import {
@@ -42,42 +42,14 @@ const rollingBeta = (stockReturns, marketReturns, window) => {
 };
 
 const RegressionBeta = () => {
-  const {
-    quantTicker, setQuantTicker,
-    quantReturns, setQuantReturns,
-    quantDates,   setQuantDates,
-    quantSpyRets, setQuantSpyRets,
-  } = useQuant();
-  const [ticker, setTicker]       = useState(quantTicker);
-  const [stockRets, setStockRets] = useState(quantReturns);
-  const [spyRets, setSpyRets]     = useState(quantSpyRets);
-  const [dates, setDates]         = useState(quantDates);
+  const [ticker, setTicker]       = useState('');
+  const [stockRets, setStockRets] = useState([]);
+  const [spyRets, setSpyRets]     = useState([]);
+  const [dates, setDates]         = useState([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
   const [activeRange, setRange]   = useState('2Y');
-  const [stockName, setName]      = useState(quantTicker);
-
-  // Sync from context when navigating to this page
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (quantReturns.length) setStockRets(quantReturns);
-    if (quantDates.length)   setDates(quantDates);
-    if (quantTicker)         { setName(quantTicker); setTicker(quantTicker); }
-
-    // Fetch SPY if we have stock data but no SPY data
-    if (quantReturns.length && !quantSpyRets.length) {
-      const range = RANGES.find(r => r.label === '2Y');
-      fetchHistorical('SPY', range.outputsize).then(spyHistory => {
-        const spyPrices = spyHistory.map(d => d.close);
-        const mr = simpleReturns(spyPrices);
-        setSpyRets(mr);
-        setQuantSpyRets(mr);
-      }).catch(() => {});
-    } else if (quantSpyRets.length) {
-      setSpyRets(quantSpyRets);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quantTicker]);
+  const [stockName, setName]      = useState('');
 
   const handleSearch = async () => {
     if (!ticker.trim()) return;
@@ -118,11 +90,6 @@ const RegressionBeta = () => {
       setSpyRets(mr);
       setDates(ds);
       setName(ticker.trim().toUpperCase());
-      // Save to context
-      setQuantTicker(ticker.trim().toUpperCase());
-      setQuantReturns(sr);
-      setQuantDates(ds);
-      setQuantSpyRets(mr);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -134,14 +101,9 @@ const RegressionBeta = () => {
     if (e.key === 'Enter') handleSearch();
   };
 
-  // Use local state if available, fall back to context
-  const activeStockRets = stockRets.length ? stockRets : quantReturns;
-  const activeSpyRets   = spyRets.length   ? spyRets   : quantSpyRets;
-  
-
   // ── OLS Regression ──
-  const reg = activeStockRets.length && activeSpyRets.length
-    ? linearRegression(activeSpyRets, activeStockRets)
+  const reg = stockRets.length && spyRets.length
+    ? linearRegression(spyRets, stockRets)
     : null;
 
   const beta        = reg?.slope      ?? 0;
