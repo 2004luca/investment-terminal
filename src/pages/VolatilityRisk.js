@@ -4,6 +4,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { useQuant } from '../utils/QuantContext';
 import Plot from 'react-plotly.js';
 import { fetchHistorical } from '../utils/api';
 import {
@@ -35,14 +36,20 @@ const SHARPE_WINDOW = 63;  // 1 quarter rolling Sharpe
 const RISK_FREE     = 0.05;
 
 const VolatilityRisk = () => {
-  const [ticker, setTicker]     = useState('');
-  const [returns, setReturns]   = useState([]);
-  const [prices, setPrices]     = useState([]);
-  const [dates, setDates]       = useState([]);
+  const {
+    quantTicker, setQuantTicker,
+    quantHistory, setQuantHistory,
+    quantReturns, setQuantReturns,
+    quantDates,   setQuantDates,
+  } = useQuant();
+  const [ticker, setTicker]     = useState(quantTicker);
+  const [returns, setReturns]   = useState(quantReturns);
+  const [prices, setPrices]     = useState(quantHistory.map(d => d.close));
+  const [dates, setDates]       = useState(quantDates);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
   const [activeRange, setRange] = useState('2Y');
-  const [stockName, setName]    = useState('');
+  const [stockName, setName]    = useState(quantTicker);
 
   const handleSearch = async () => {
     if (!ticker.trim()) return;
@@ -62,6 +69,11 @@ const VolatilityRisk = () => {
       setReturns(rets);
       setDates(ds);
       setName(ticker.trim().toUpperCase());
+      // Save to context
+      setQuantTicker(ticker.trim().toUpperCase());
+      setQuantHistory(history);
+      setQuantReturns(rets);
+      setQuantDates(ds);
     } catch (err) {
       setError(err.message);
     } finally {
