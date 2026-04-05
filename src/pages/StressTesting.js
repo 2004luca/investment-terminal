@@ -151,49 +151,28 @@ const worstRolling = (returns, window) => {
 
 const StressTesting = () => {
   const { portfolioData } = usePortfolio();
-  if (!portfolioData) {
-    return (
-      <>
-        <div className="page-header">
-          <h2>Risk & Return</h2>
-          <p>Sharpe, Sortino, Calmar, Max Drawdown, VaR, CVaR — with formulas and explanations</p>
-        </div>
-        <div className="page-body">
-          <div className="chart-empty">
-            <span style={{ fontSize: '14px' }}>No portfolio found</span>
-            <span style={{ fontSize: '12px' }}>
-              Go to Portfolio Builder and build a portfolio first
-            </span>
-          </div>
-        </div>
-      </>
-    );
-  }
   const [activeScenario, setActiveScenario] = useState(null);
 
-  const { tickers, weights, holdingStats, portReturns, chartDates } = portfolioData;
+  const tickers      = useMemo(() => portfolioData?.tickers      ?? [], [portfolioData]);
+  const weights      = useMemo(() => portfolioData?.weights      ?? [], [portfolioData]);
+  const holdingStats = useMemo(() => portfolioData?.holdingStats ?? [], [portfolioData]);
+  const portReturns  = useMemo(() => portfolioData?.portReturns  ?? [], [portfolioData]);
+  const chartDates   = useMemo(() => portfolioData?.chartDates   ?? [], [portfolioData]);
 
   // ── Compute scenario returns ──
   const scenarioResults = useMemo(() => {
+    if (!portfolioData) return [];
     return SCENARIOS.map(scenario => {
-      // Compute portfolio return for this scenario
       const portReturn = tickers.reduce((sum, t, i) => {
         const sector = getSector(t);
         const assetReturn = scenario.sectorReturns[sector] ?? scenario.sectorReturns.default;
         return sum + weights[i] * assetReturn;
       }, 0);
-
       const vsspy = portReturn - scenario.spyReturn;
       const relativePerf = vsspy > 0 ? 'outperformed' : 'underperformed';
-
-      return {
-        ...scenario,
-        portReturn,
-        vsspy,
-        relativePerf,
-      };
+      return { ...scenario, portReturn, vsspy, relativePerf };
     });
-  }, [tickers, weights]);
+  }, [portfolioData, tickers, weights]);
 
   // ── Early return after all hooks ──
   if (!portfolioData) {

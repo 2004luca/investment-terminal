@@ -126,17 +126,19 @@ const EfficientFrontier = () => {
   const [activeTab, setTab] = useState('markowitz');
   const [views, setViews]   = useState({});
 
-  const { tickers, weights, holdingStats } = portfolioData;
+  const tickers      = useMemo(() => portfolioData?.tickers      ?? [], [portfolioData]);
+  const weights      = useMemo(() => portfolioData?.weights      ?? [], [portfolioData]);
+  const holdingStats = useMemo(() => portfolioData?.holdingStats ?? [], [portfolioData]);
 
   // ── Build returns matrix and covariance ──
 
   // Use actual daily returns from portfolio data
   const dailyReturnsMatrix = useMemo(() => {
+    if (!portfolioData) return [];
     const n = portfolioData.portReturns.length;
     return tickers.map((t, i) => {
       const h = holdingStats.find(x => x.ticker === t);
       if (!h) return Array(n).fill(0);
-      // Reconstruct individual returns from portfolio data
       return portfolioData.portReturns.map(() =>
         h.annReturn / 252 + (Math.random() - 0.5) * h.annVol / Math.sqrt(252)
       );
@@ -144,51 +146,53 @@ const EfficientFrontier = () => {
   }, [portfolioData, holdingStats, tickers]);
 
   const annualReturns = holdingStats.map(h => h.annReturn);
-  const covMatrix     = useMemo(() =>
-    covarianceMatrix(dailyReturnsMatrix),
-    [dailyReturnsMatrix]
-  );
 
-  // ── Monte Carlo ──
-  const simResults = useMemo(() =>
-    runMonteCarlo(annualReturns, covMatrix, N_SIM),
-    [annualReturns, covMatrix]
-  );
+  const covMatrix = useMemo(() => {
+    if (!portfolioData) return [];
+    return covarianceMatrix(dailyReturnsMatrix);
+  }, [portfolioData, dailyReturnsMatrix]);
 
-  // ── Min Variance & Max Sharpe ──
-  const minVarPort  = simResults.reduce((best, p) =>
-    p.vol < best.vol ? p : best, simResults[0]);
-  const maxSharpePort = simResults.reduce((best, p) =>
-    p.sharpe > best.sharpe ? p : best, simResults[0]);
+  const simResults = useMemo(() => {
+    if (!portfolioData) return [];
+    return runMonteCarlo(annualReturns, covMatrix, N_SIM);
+  }, [portfolioData, annualReturns, covMatrix]);
 
-  // ── Current portfolio stats ──
-  const currentVol    = annualizedVol(portfolioData.portReturns);
-  const currentReturn = annualizedReturn(portfolioData.portReturns);
-  const currentSharpe = sharpeRatio(portfolioData.portReturns, RISK_FREE);
+  const minVarPort = simResults.length
+    ? simResults.reduce((best, p) => p.vol < best.vol ? p : best, simResults[0])
+    : { vol: 0, ret: 0, sharpe: 0, w: [] };
+  const maxSharpePort = simResults.length
+    ? simResults.reduce((best, p) => p.sharpe > best.sharpe ? p : best, simResults[0])
+    : { vol: 0, ret: 0, sharpe: 0, w: [] };
 
-  // ── CML points ──
+  const currentVol    = portfolioData ? annualizedVol(portfolioData.portReturns) : 0;
+  const currentReturn = portfolioData ? annualizedReturn(portfolioData.portReturns) : 0;
+  const currentSharpe = portfolioData ? sharpeRatio(portfolioData.portReturns, RISK_FREE) : 0;
+
   const cmlVols = [0, maxSharpePort.vol * 2];
   const cmlRets = cmlVols.map(v => RISK_FREE + maxSharpePort.sharpe * v);
 
-  // ── BL returns ──
   const blViews = tickers.map(t =>
     views[t] !== undefined ? parseFloat(views[t]) / 100 : annualReturns[tickers.indexOf(t)]
   );
   const equilibriumRets = annualReturns;
+
   const blReturns = useMemo(() => {
+    if (!portfolioData) return [];
     try {
       return blackLitterman(covMatrix, equilibriumRets, blViews);
     } catch {
       return equilibriumRets;
     }
-  }, [covMatrix, equilibriumRets, blViews]);
+  }, [portfolioData, covMatrix, equilibriumRets, blViews]);
 
-  const blSimResults = useMemo(() =>
-    runMonteCarlo(blReturns, covMatrix, N_SIM),
-    [blReturns, covMatrix]
-  );
-  const blMaxSharpe = blSimResults.reduce((best, p) =>
-    p.sharpe > best.sharpe ? p : best, blSimResults[0]);
+  const blSimResults = useMemo(() => {
+    if (!portfolioData) return [];
+    return runMonteCarlo(blReturns, covMatrix, N_SIM);
+  }, [portfolioData, blReturns, covMatrix]);
+
+  const blMaxSharpe = blSimResults.length
+    ? blSimResults.reduce((best, p) => p.sharpe > best.sharpe ? p : best, blSimResults[0])
+    : { vol: 0, ret: 0, sharpe: 0, w: [] };
   // ── Early return after all hooks ──
   if (!portfolioData) {
     return (
